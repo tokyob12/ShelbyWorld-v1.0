@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Shelbyworld Quest | Decentralized 3D Gaming</title>
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='none' stroke='%2300E5FF' stroke-width='10'/><circle cx='50' cy='50' r='20' fill='%2300E5FF'/></svg>" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <style>
+      :root {
+        --shelby-cyan: #00E5FF;
+        --shelby-cyan-glow: rgba(0, 229, 255, 0.6);
+        --bg-dark: #050508;
+        --text-main: #ffffff;
+        --text-muted: #8892b0;
+      }
+
+      html, body {
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-dark);
+        font-family: 'Space Grotesk', sans-serif;
+      }
+
+      #renderCanvas {
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        outline: none;
+      }
+
+      #canvasZone {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        z-index: 1;
+      }
+
+      #welcomeOverlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background-color: var(--bg-dark);
+        transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter 1s;
+        overflow: hidden;
+        --mouse-x: 50vw;
+        --mouse-y: 50vh;
+      }
+
+      .vignette {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at center, transparent 30%, rgba(5,5,8,0.9) 100%);
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      .base-grid {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background-size: 50px 50px;
+        background-image: 
+          linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      }
+
+      .highlight-grid {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background-size: 50px 50px;
+        background-image: 
+          linear-gradient(to right, rgba(0, 229, 255, 0.3) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(0, 229, 255, 0.3) 1px, transparent 1px);
+        
+        -webkit-mask-image: radial-gradient(circle 350px at var(--mouse-x) var(--mouse-y), black 0%, transparent 100%);
+        mask-image: radial-gradient(circle 350px at var(--mouse-x) var(--mouse-y), black 0%, transparent 100%);
+        mix-blend-mode: screen;
+      }
+
+      .cursor-glow {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background: radial-gradient(circle 500px at var(--mouse-x) var(--mouse-y), rgba(0, 229, 255, 0.08) 0%, transparent 80%);
+        mix-blend-mode: screen;
+      }
+
+      .nav-header, .hero-footer {
+        position: relative;
+        z-index: 2;
+        padding: 2rem 4rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        opacity: 0;
+      }
+
+      .nav-header { animation: fadeDown 1s forwards 0.2s; }
+      .hero-footer { 
+        animation: fadeUp 1s forwards 1.2s; 
+        color: var(--text-muted); 
+        font-size: 0.85rem; 
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .logo { font-size: 1.5rem; font-weight: 700; color: var(--text-main); letter-spacing: 2px; }
+      .logo span { color: var(--shelby-cyan); }
+
+      .hero-wrapper {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        perspective: 1000px;
+      }
+
+      .hero-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 0 2rem;
+        transform-style: preserve-3d;
+        will-change: transform;
+      }
+
+      .badge {
+        background: rgba(0, 229, 255, 0.05);
+        border: 1px solid rgba(0, 229, 255, 0.2);
+        color: var(--shelby-cyan);
+        padding: 0.5rem 1.5rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-bottom: 1.5rem;
+        opacity: 0;
+        animation: fadeUp 1s forwards 0.4s;
+        backdrop-filter: blur(5px);
+        transform: translateZ(30px);
+      }
+
+      .hero-title {
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        margin: 0 0 1.5rem 0;
+        color: var(--text-main);
+        text-shadow: 0 0 40px rgba(0, 229, 255, 0.15);
+        opacity: 0;
+        animation: fadeUp 1s forwards 0.6s;
+        transform: translateZ(50px);
+      }
+
+      .hero-subtitle {
+        font-size: clamp(1rem, 1.5vw, 1.15rem);
+        color: var(--text-muted);
+        max-width: 700px;
+        margin: 0 0 3rem 0;
+        line-height: 1.6;
+        opacity: 0;
+        animation: fadeUp 1s forwards 0.8s;
+        transform: translateZ(20px);
+      }
+
+      .hero-subtitle b {
+        color: #ffffff;
+      }
+
+      #startButton {
+        position: relative;
+        padding: 1.2rem 3.5rem;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--bg-dark);
+        background: var(--shelby-cyan);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        opacity: 0;
+        animation: fadeUp 1s forwards 1s;
+        letter-spacing: 1px;
+        transform: translateZ(40px);
+      }
+
+      #startButton::before {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%; width: 50%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+        transform: skewX(-20deg);
+        transition: 0.5s;
+      }
+
+      #startButton:hover:not(:disabled) {
+        transform: translateZ(50px) scale(1.05);
+        box-shadow: 0 0 20px var(--shelby-cyan-glow);
+      }
+
+      #startButton:hover:not(:disabled)::before {
+        left: 150%;
+      }
+
+      #startButton:disabled {
+        background: transparent;
+        color: var(--text-muted);
+        border: 1px solid rgba(136, 146, 176, 0.3);
+        box-shadow: none;
+        cursor: not-allowed;
+      }
+
+      #startButton:disabled::after {
+        content: '';
+        display: inline-block;
+        width: 12px;
+        text-align: left;
+        animation: loadingDots 1.5s infinite;
+      }
+
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(30px) translateZ(0); }
+        to { opacity: 1; }
+      }
+      @keyframes fadeDown {
+        from { opacity: 0; transform: translateY(-30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes loadingDots {
+        0% { content: '.'; }
+        33% { content: '..'; }
+        66% { content: '...'; }
+        100% { content: ''; }
+      }
+
+      @media (max-width: 768px) {
+        .nav-header, .hero-footer { padding: 1.5rem; }
+      }
+    </style>
+  </head>
+  <body>
+    
+    <!-- 3D Engine Canvas -->
+    <div id="canvasZone">
+        <canvas id="renderCanvas"></canvas>
+    </div>
+
+    <!-- IMMERSIVE LANDING PAGE OVERLAY -->
+    <div id="welcomeOverlay">
+        
+        <div class="base-grid"></div>
+        <div class="highlight-grid"></div>
+        <div class="cursor-glow"></div>
+        <div class="vignette"></div>
+
+        <header class="nav-header">
+            <div class="logo">SHELBYWORLD <span>QUEST</span></div>
+            <div style="font-size: 0.85rem; letter-spacing: 1px; color: #8892b0;">BUILT WITH BABYLON.JS</div>
+        </header>
+
+        <div class="hero-wrapper">
+            <main class="hero-content" id="heroContent">
+                <div class="badge">SHELBY HACKATHON SUBMISSION</div>
+                <h1 class="hero-title">ZERO LAG. S3-LIKE SPEEDS.</h1>
+                <p class="hero-subtitle">
+                    Welcome to a real-time 3D scavenger hunt where <b>all 3D assets are stored directly on Shelby</b>. 
+                    Explore the Outpost and correctly answer 7 out of 10 questions to mint your <b>Portal Pass NFT</b> on Aptos. 
+                    After minting, find the hidden teleport door to enter Shelbyworld!
+                    <br><br>
+                    Assets are streamed with cryptographic provenance for a seamless, verifiable gaming experience—because Web3 shouldn't mean 10-second load times.
+                </p>
+                <button id="startButton" disabled>INITIALIZING ENGINE</button>
+            </main>
+        </div>
+
+        <footer class="hero-footer">
+            <div style="width: 100%; display: flex; justify-content: space-between;">
+                <div>POWERED BY SHELBY & BABYLON.JS</div>
+                <div id="shelbyLoadMetric" style="color: var(--shelby-cyan); font-weight: bold; opacity: 0; transition: opacity 0.5s;"></div>
+            </div>
+            
+            <div style="width: 100%; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 15px; margin-top: 5px;">
+                CREATED BY ARASH | 
+                TWITTER: <a href="https://twitter.com/arashb122" target="_blank" style="color: var(--shelby-cyan); text-decoration: none; transition: 0.2s;">@ARASHB122</a> | 
+                DISCORD: <span style="color: var(--text-main);">arashb12</span>
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+      const overlay = document.getElementById('welcomeOverlay');
+      const heroContent = document.getElementById('heroContent');
+      let targetX = window.innerWidth / 2;
+      let targetY = window.innerHeight / 2;
+      let currentX = targetX;
+      let currentY = targetY;
+
+      overlay.addEventListener('mousemove', (e) => {
+        targetX = e.clientX;
+        targetY = e.clientY;
+      });
+
+      function animate() {
+        currentX += (targetX - currentX) * 0.08;
+        currentY += (targetY - currentY) * 0.08;
+
+        overlay.style.setProperty('--mouse-x', `${currentX}px`);
+        overlay.style.setProperty('--mouse-y', `${currentY}px`);
+
+        const xAxis = (window.innerWidth / 2 - currentX) / (window.innerWidth / 2);
+        const yAxis = (window.innerHeight / 2 - currentY) / (window.innerHeight / 2);
+
+        heroContent.style.transform = `rotateY(${xAxis * -4}deg) rotateX(${yAxis * 4}deg)`;
+
+        requestAnimationFrame(animate);
+      }
+      animate();
+    </script>
+
+    <script type="module" src="src/index.js"></script> 
+  </body>
+</html>

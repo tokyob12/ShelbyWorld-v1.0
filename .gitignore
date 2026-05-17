@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Production build files
+dist/
+build/
+
+# Cache files (Parcel uses these)
+.cache/
+.parcel-cache/
+
+# Environment variables (keep your secrets safe)
+.env
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Ignore 3D models and environments
+*.glb
+*.hdr
