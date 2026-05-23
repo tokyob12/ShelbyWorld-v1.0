@@ -51,7 +51,10 @@
         justify-content: space-between;
         background-color: var(--bg-dark);
         transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter 1s;
-        overflow: hidden;
+        /* Replaced 'overflow: hidden' with 'overflow-y: auto' to support scrolling on low-height viewports */
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         --mouse-x: 50vw;
         --mouse-y: 50vh;
       }
@@ -110,6 +113,7 @@
       }
 
       .nav-header { animation: fadeDown 1s forwards 0.2s; }
+      
       .hero-footer { 
         animation: fadeUp 1s forwards 1.2s; 
         color: var(--text-muted); 
@@ -117,6 +121,25 @@
         display: flex;
         flex-direction: column;
         gap: 15px;
+      }
+
+      .footer-top {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .footer-bottom {
+        width: 100%;
+        text-align: center;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 15px;
+        margin-top: 5px;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
       }
 
       .logo { font-size: 1.5rem; font-weight: 700; color: var(--text-main); letter-spacing: 2px; }
@@ -130,6 +153,7 @@
         justify-content: center;
         flex: 1;
         perspective: 1000px;
+        padding: 2rem 0;
       }
 
       .hero-content {
@@ -140,6 +164,7 @@
         padding: 0 2rem;
         transform-style: preserve-3d;
         will-change: transform;
+        max-width: 800px;
       }
 
       .badge {
@@ -160,10 +185,11 @@
       }
 
       .hero-title {
-        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        /* Adjusted the clamp scale to prevent overflow on portrait viewports */
+        font-size: clamp(2rem, 5.5vw, 4rem);
         font-weight: 700;
-        line-height: 1.1;
-        letter-spacing: -0.02em;
+        line-height: 1.15;
+        letter-spacing: -0.01em;
         margin: 0 0 1.5rem 0;
         color: var(--text-main);
         text-shadow: 0 0 40px rgba(0, 229, 255, 0.15);
@@ -173,10 +199,10 @@
       }
 
       .hero-subtitle {
-        font-size: clamp(1rem, 1.5vw, 1.15rem);
+        font-size: clamp(0.9rem, 2.5vw, 1.1rem);
         color: var(--text-muted);
         max-width: 700px;
-        margin: 0 0 3rem 0;
+        margin: 0 0 2.5rem 0;
         line-height: 1.6;
         opacity: 0;
         animation: fadeUp 1s forwards 0.8s;
@@ -189,9 +215,9 @@
 
       #startButton {
         position: relative;
-        padding: 1.2rem 3.5rem;
+        padding: 1.1rem 3rem;
         font-family: 'Space Grotesk', sans-serif;
-        font-size: 1.1rem;
+        font-size: 1rem;
         font-weight: 700;
         color: var(--bg-dark);
         background: var(--shelby-cyan);
@@ -216,7 +242,7 @@
       }
 
       #startButton:hover:not(:disabled) {
-        transform: translateZ(50px) scale(1.05);
+        transform: translateZ(50px) scale(1.03);
         box-shadow: 0 0 20px var(--shelby-cyan-glow);
       }
 
@@ -241,11 +267,11 @@
       }
 
       @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(30px) translateZ(0); }
+        from { opacity: 0; transform: translateY(20px) translateZ(0); }
         to { opacity: 1; }
       }
       @keyframes fadeDown {
-        from { opacity: 0; transform: translateY(-30px); }
+        from { opacity: 0; transform: translateY(-20px); }
         to { opacity: 1; transform: translateY(0); }
       }
       @keyframes loadingDots {
@@ -255,8 +281,63 @@
         100% { content: ''; }
       }
 
-      @media (max-width: 768px) {
-        .nav-header, .hero-footer { padding: 1.5rem; }
+      /* MEDIA QUERIES FOR SEAMLESS RESPONSIVENESS */
+      @media (max-width: 900px) {
+        .nav-header, .hero-footer { padding: 1.5rem 2.5rem; }
+      }
+
+      @media (max-width: 600px) {
+        .nav-header {
+          flex-direction: column;
+          gap: 0.5rem;
+          padding: 1.5rem 1rem 0.5rem 1rem;
+          text-align: center;
+        }
+
+        .hero-wrapper {
+          padding: 1rem 0;
+        }
+
+        .hero-content {
+          padding: 0 1rem;
+        }
+
+        .hero-title {
+          margin-bottom: 1rem;
+        }
+
+        .hero-subtitle {
+          margin-bottom: 1.8rem;
+        }
+
+        #startButton {
+          padding: 1rem 2.2rem;
+          font-size: 0.95rem;
+          width: 100%;
+          max-width: 320px;
+        }
+
+        .hero-footer {
+          padding: 1rem;
+          font-size: 0.75rem;
+        }
+
+        .footer-top {
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          gap: 6px;
+        }
+      }
+
+      /* Landscape phone and ultra-low screen height safety wrapper */
+      @media (max-height: 550px) {
+        #welcomeOverlay {
+          justify-content: flex-start;
+        }
+        .hero-wrapper {
+          padding: 2rem 0;
+        }
       }
     </style>
   </head>
@@ -296,12 +377,12 @@
         </div>
 
         <footer class="hero-footer">
-            <div style="width: 100%; display: flex; justify-content: space-between;">
+            <div class="footer-top">
                 <div>POWERED BY SHELBY & BABYLON.JS</div>
                 <div id="shelbyLoadMetric" style="color: var(--shelby-cyan); font-weight: bold; opacity: 0; transition: opacity 0.5s;"></div>
             </div>
             
-            <div style="width: 100%; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 15px; margin-top: 5px;">
+            <div class="footer-bottom">
                 CREATED BY ARASH | 
                 TWITTER: <a href="https://twitter.com/arashb122" target="_blank" style="color: var(--shelby-cyan); text-decoration: none; transition: 0.2s;">@ARASHB122</a> | 
                 DISCORD: <span style="color: var(--text-main);">arashb12</span>

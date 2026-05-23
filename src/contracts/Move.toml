@@ -1,0 +1,17 @@
+[package]
+name = "game_protocol"
+version = "1.0.0"
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+subdir = "aptos-framework"
+rev = "mainnet"
+
+[dependencies.AptosTokenObjects]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+subdir = "aptos-token-objects"
+rev = "mainnet"
+
+[addresses]
+game_addr = "_"
+aptos_token_objects = "0x4"

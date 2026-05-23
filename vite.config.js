@@ -1,6 +1,8 @@
 // vite.config.js
 
 import { defineConfig } from 'vite';
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
+
 
 export default defineConfig({
   root: './',
@@ -13,8 +15,10 @@ export default defineConfig({
     '**/*.hdr', 
     '**/*.m4a', 
     '**/*.mp3', 
-    '**/*.wav'
+    '**/*.wav',
+    '**/*.wasm'
   ], 
+
 
   build: {
     assetsDir: 'assets',
@@ -39,6 +43,31 @@ export default defineConfig({
       { find: 'recast', replacement: '' } 
     ]
   },
+
+    plugins: [
+    nodePolyfills({
+      // Enable polyfills for specific Node.js globals
+      globals: {
+        Buffer: true, // Polyfills Node's global Buffer
+        global: true,
+        process: true,
+      },
+      // Polyfills standard node modules like stream, path, etc. if required
+      protocolImports: true,
+    }),
+        // Custom middleware to ensure Vite serves .wasm files with the correct MIME type
+    {
+      name: 'wasm-content-type',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url.endsWith('.wasm')) {
+            res.setHeader('Content-Type', 'application/wasm');
+          }
+          next();
+        });
+      },
+    },
+  ],
   
   // 2. CRITICAL FIX FOR DEV SERVER: EXCLUDE MODULAR DEPENDENCIES
   // This prevents Vite from pre-bundling the Babylon modules that rely on side-effects
@@ -53,7 +82,9 @@ export default defineConfig({
       // Exclude these so their side-effect code runs as expected
       '@babylonjs/core', 
       '@babylonjs/loaders/glTF',
-      '@babylonjs/havok'
+      '@babylonjs/havok',
+      '@shelby-protocol/sdk'
+
     ]
   }
 });

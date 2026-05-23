@@ -1,3 +1,8 @@
+// --- Polyfills for Browser Compatibility ---
+import { Buffer } from "buffer/";
+window.Buffer = Buffer;
+globalThis.Buffer = Buffer;
+
 // --- Babylon.js Core and Engine Imports ---
 import * as BABYLON from "@babylonjs/core/Legacy/legacy";
 import "@babylonjs/core/Meshes/meshBuilder";
@@ -87,22 +92,31 @@ async function preloadGameEngine() {
     window.scene = sceneManager.getScene();
     sceneToRender = window.scene;
 
-    // 5. Kick off ASYNC Asset Loading in the background (DO NOT AWAIT IT HERE!)
+// 5. Kick off ASYNC Asset Loading in the background
+    if (startButton) {
+        startButton.textContent = "STREAMING METAVERSE...";
+    }
+
     sceneManager.initializeScene().then(() => {
         // Initialize UI only AFTER assets are done loading
         HUDManager.initialize(sceneManager.getScene(), sceneManager.characterController);
         SettingsUI.initialize(canvas, sceneManager);
         console.log("All 3D Assets Loaded Successfully!");
+
+        // 6. UNLOCK THE START BUTTON ONLY AFTER LOADING FINISHES!
+        if (startButton) {
+            startButton.disabled = false;
+            startButton.textContent = "START GAME";
+            startButton.style.boxShadow = "0 0 20px rgba(0, 229, 255, 0.4), 0 0 40px rgba(0, 229, 255, 0.2)";
+        }
     }).catch(error => {
         console.error("Asset loading failed:", error);
+        if (startButton) {
+            startButton.textContent = "CONNECTION ERROR";
+            startButton.style.backgroundColor = "#ff4444";
+            startButton.style.color = "#ffffff";
+        }
     });
-
-    // 6. UNLOCK THE START BUTTON IMMEDIATELY!
-    if (startButton) {
-        startButton.disabled = false;
-        startButton.textContent = "START GAME";
-        startButton.style.boxShadow = "0 0 20px rgba(255, 210, 8, 0.4), 0 0 40px rgba(255, 210, 8, 0.2)";
-    }
 }
 
 

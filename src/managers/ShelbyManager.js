@@ -1,5 +1,7 @@
 import { HUDManager } from "./HUDManager";
 import { getAptosWallets } from "@aptos-labs/wallet-standard";
+import { ShelbyClient } from "@shelby-protocol/sdk/browser";
+import { Network, Account, Ed25519PrivateKey } from "@aptos-labs/ts-sdk";
 
 export class ShelbyManager {
     static walletAddress = null;
@@ -7,7 +9,11 @@ export class ShelbyManager {
     static currentSessionId = null;
     static activeWallet = null; 
 
-    static SHELBY_MODULE_ADDRESS = "0xYourShelbyAddress::game_protocol"; 
+    // Point this to your published Move module address on Testnet
+    static SHELBY_MODULE_ADDRESS = "0x8ec6f91e25f8d7a9d14abd36956019583512fd5142aa82e92e3aed494a40b386::game_protocol"; 
+
+    // Paste your pre-funded private key from config.yaml here!
+    static SPONSOR_PRIVATE_KEY_HEX = "0xfbfc29690378b7bc5465b6a1266b29fdd0cad279e9bf047b4d0bb933ef8103d0"; 
 
     /**
      * Safely grabs the Aptos Wallet Standard array via the official adapter,
@@ -80,7 +86,7 @@ export class ShelbyManager {
             
             if (!rawAddress) throw new Error("Failed to retrieve wallet address.");
 
-            // FIX: Convert the address object to a string
+            // Convert the address object to a string
             this.walletAddress = typeof rawAddress === 'string' ? rawAddress : rawAddress.toString();
 
             this.activeWallet = wallet; 
@@ -146,10 +152,8 @@ export class ShelbyManager {
     }
 
     /**
-     * Submits the final score
-     */
-/**
-     * Submits the final score (Mints NFT)
+     * Submits the final score by executing a live Aptos Move transaction payload (AIP-62)
+     * and automatically archiving the player session data to Shelby Decentralized Storage.
      */
     static async submitFinalScore(credits) {
         if (!this.isConnected || !this.currentSessionId || !this.activeWallet) {
@@ -157,21 +161,82 @@ export class ShelbyManager {
         }
 
         try {
-            HUDManager.showNotification("Shelby Protocol", "Minting score as NFT on Aptos...", 5000);
+            HUDManager.showNotification("Shelby Protocol", "Signing transaction payload...", 4000);
             
-            // Check for transaction standard
+            // Check for transaction signing standard
             const transactionFeature = this.activeWallet.features["aptos:signAndSubmitTransaction"];
             if (!transactionFeature) {
-                throw new Error("Wallet cannot sign transactions.");
+                throw new Error("Wallet does not support transaction signing.");
             }
 
-            // Simulate signing delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Create a concrete AIP-62 transaction payload targeting your Move module
+            const payload = {
+                function: `${this.SHELBY_MODULE_ADDRESS}::mint_passport`,
+                typeArguments: [],
+                functionArguments: [
+                    credits.toString() // String representation required for standard blockchain serialization
+                ]
+            };
 
-            HUDManager.showNotification("NFT Minted!", `Score NFT of ${credits} secured on Aptos!`, 5000);
+            // Request signature and execution from Petra / Aptos wallet standard
+            const response = await transactionFeature.signAndSubmitTransaction({
+                payload
+            });
+
+            const txHash = response.hash;
+            console.log("Aptos Mint Transaction Hash:", txHash);
+            HUDManager.showNotification("NFT Minted!", `Score Passport NFT secured on-chain!`, 5000);
+
+            // ==========================================================
+            // SHELBY STORAGE INTEGRATION
+            // Archiving verified score metadata directly to Shelby hot storage
+            // ==========================================================
+            try {
+                HUDManager.showNotification("Shelby Storage", "Archiving score record to Shelby...", 3000);
+
+                const shelbyClient = new ShelbyClient({ network: "shelbynet" });
+
+                // Construct session payload
+                const scoreData = {
+                    wallet_address: this.walletAddress,
+                    score: credits,
+                    tx_hash: txHash,
+                    timestamp: Date.now()
+                };
+
+                const textEncoder = new TextEncoder();
+                const blobData = textEncoder.encode(JSON.stringify(scoreData));
+
+                // Initialize Sponsor Signer from your pre-funded private key
+                if (this.SPONSOR_PRIVATE_KEY_HEX === "0xYourPreFundedPrivateKeyHere") {
+                    throw new Error("Sponsor Private Key not configured in ShelbyManager.js");
+                }
+                const pKey = new Ed25519PrivateKey(this.SPONSOR_PRIVATE_KEY_HEX);
+                const sponsorSigner = Account.fromPrivateKey({ privateKey: pKey });
+
+                // Push blob to the Shelby network using the sponsor account to pay fees
+                await shelbyClient.upload({
+                    blobData,
+                    signer: sponsorSigner, 
+                    blobName: `player_scores/${this.walletAddress}.json`,
+                    expirationMicros: Date.now() * 1000 + (86400 * 365 * 1000000) // 365 Days Retention
+                });
+
+                // Under Shelby Protocol, the retrieval path is constructed deterministically
+                const blobUrl = `https://api.shelbynet.shelby.xyz/shelby/v1/blobs/${sponsorSigner.accountAddress.toString()}/player_scores/${this.walletAddress}.json`;
+                console.log("Player record archived on Shelby at URI:", blobUrl);
+                HUDManager.showNotification("Shelby Storage", "Score permanently saved!", 4000);
+
+            } catch (shelbyErr) {
+                console.error("Shelby archiving failed:", shelbyErr);
+                HUDManager.showNotification("Storage Error", "Could not save backup record.", 3000);
+            }
+            // ==========================================================
+            
+            return txHash;
         } catch (error) {
             console.error("Failed to submit score:", error);
-            HUDManager.showNotification("Transaction Failed", "Could not mint NFT.", 3000);
+            HUDManager.showNotification("Transaction Failed", "User rejected signature or transaction failed.", 4000);
             throw error;
         }
     }
