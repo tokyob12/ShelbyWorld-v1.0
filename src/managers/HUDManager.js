@@ -745,43 +745,70 @@ export class HUDManager {
   }
 
   static showNotification(title, message, duration = 5000) {
+    // 1. Ensure the notification container wrapper exists
+    let container = document.getElementById("shelby-notification-container");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "shelby-notification-container";
+        Object.assign(container.style, {
+            position: "fixed",
+            top: "100px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+            alignItems: "center",
+            zIndex: "20000",
+            pointerEvents: "none"
+        });
+        document.body.appendChild(container);
+    }
+
+    // 2. Create the individual Toast Notification
     const notification = document.createElement("div");
     Object.assign(notification.style, {
-      position: "fixed",
-      top: "100px", 
-      left: "50%",
-      transform: "translateX(-50%)",
-      padding: "15px 30px",
-      background: "rgba(10, 10, 30, 0.95)", 
-      color: "white",
-      border: `2px solid ${CONFIG.HUD.HIGHLIGHT_COLOR}`, 
-      borderRadius: "4px",
-      boxShadow: `0 0 15px rgba(0, 229, 255, 0.5)`,
-      fontFamily: CONFIG.HUD.FONT_FAMILY,
-      zIndex: "2000",
-      transition: "opacity 0.5s ease-out, transform 0.5s ease-out",
-      opacity: "0", 
+        width: "max-content",
+        maxWidth: "min(450px, 90vw)",
+        padding: "12px 24px",
+        background: "rgba(10, 10, 30, 0.95)",
+        color: "white",
+        border: `2px solid ${CONFIG.HUD.HIGHLIGHT_COLOR}`,
+        borderRadius: "4px",
+        boxShadow: "0 8px 30px rgba(0, 229, 255, 0.2)",
+        fontFamily: CONFIG.HUD.FONT_FAMILY,
+        pointerEvents: "auto",
+        transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+        opacity: "0",
+        transform: "translateY(-15px)"
     });
 
     notification.innerHTML = `
-      <div style="font-weight: bold; font-size: 16px; color: ${CONFIG.HUD.HIGHLIGHT_COLOR};">${title}</div>
-      <div style="font-size: 14px; margin-top: 5px;">${message}</div>
+      <div style="font-weight: bold; font-size: 15px; color: ${CONFIG.HUD.HIGHLIGHT_COLOR};">${title}</div>
+      <div style="font-size: 13px; margin-top: 4px; line-height: 1.4;">${message}</div>
     `;
 
-    document.body.appendChild(notification);
+    container.appendChild(notification);
 
+    // 3. Fade in smoothly
     setTimeout(() => {
-      notification.style.opacity = "1";
-      notification.style.transform = "translateX(-50%) translateY(0)"; 
+        notification.style.opacity = "1";
+        notification.style.transform = "translateY(0)";
     }, 50);
 
+    // 4. Fade out and remove cleanly
     setTimeout(() => {
-      notification.style.opacity = "0";
-      notification.style.transform = "translateX(-50%) translateY(-10px)";
-      
-      setTimeout(() => {
-        notification.remove();
-      }, 500); 
+        notification.style.opacity = "0";
+        notification.style.transform = "translateY(-10px)";
+        
+        setTimeout(() => {
+            notification.remove();
+            
+            // Clean up container if empty to avoid lingering DOM elements
+            if (container.children.length === 0) {
+                container.remove();
+            }
+        }, 400); 
     }, duration);
   }
 
@@ -941,8 +968,8 @@ export class HUDManager {
     try {
       const canvas = this.scene.getEngine().getRenderingCanvas();
       const cam = this.scene.activeCamera;
-      if (cam && canvas && typeof cam.detachControl === "function") {
-        cam.detachControl(canvas);
+      if (cam && canvas && typeof cam.attachControl === "function") {
+        cam.attachControl(canvas, true);
       }
     } catch (e) { console.warn(e); }
 
